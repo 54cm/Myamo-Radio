@@ -1,8 +1,8 @@
+import os
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk, ImageFilter
+from PIL import Image, ImageTk
 import vlc
-import os
 
 # --- Dossiers ---
 CACHE_DIR = "cache"
@@ -13,15 +13,25 @@ RECITATORS = {
     "Mishary Alafasy": {
         "img": "mishary.png",
         "tracks": {
-            "Al-Fatiha": "mishary_alafasy_001.mp3",
-            "Al-Baqara": "mishary_alafasy_002.mp3"
+            "Al-Fatiha": "Mishary_alafasy_001.wav",
+            "Al-Baqara": "Mishary_alafasy_002.wav",
+            "Al-Ikhlas": "Mishary_alafasy_003.wav"
         }
     },
     "Yasir Al-Dawsari": {
         "img": "yasir.png",
         "tracks": {
-            "Al-Fatiha": "yasir_001.mp3",
-            "Al-Baqara": "yasir_002.mp3"
+            "Al-Fatiha": "Yasir_001.wav",
+            "Al-Baqara": "Yasir_002.wav",
+            "Al-Kawthar": "Yasir_003.wav"
+        }
+    },
+    "Saad Al-Ghamdi": {
+        "img": "saad.png",
+        "tracks": {
+            "Al-Fatiha": "Saad_001.wav",
+            "Al-Baqara": "Saad_002.wav",
+            "Al-Asr": "Saad_003.wav"
         }
     }
 }
@@ -37,12 +47,10 @@ def play():
     if not current_track:
         status_label.config(text="⚠ Sélectionnez une sourate")
         return
-
     file_path = os.path.join(AUDIO_DIR, current_track)
     if not os.path.exists(file_path):
         status_label.config(text=f"⚠ Introuvable : {file_path}")
         return
-
     instance = vlc.Instance()
     player = instance.media_player_new()
     media = instance.media_new(file_path)
@@ -56,14 +64,22 @@ def stop():
         player.stop()
         status_label.config(text="⏹ Arrêté")
 
+def next_track():
+    global current_track, selected_reciter
+    tracks = list(RECITATORS[selected_reciter]["tracks"].values())
+    if current_track in tracks:
+        idx = tracks.index(current_track)
+        idx = (idx + 1) % len(tracks)
+        current_track = tracks[idx]
+        play()
+
 def set_volume(val):
     global player
     if player:
-        volume = int(val)
-        player.audio_set_volume(volume)
+        player.audio_set_volume(int(val))
 
 def on_sourate_select(event):
-    global current_track, selected_reciter
+    global current_track
     sourate = sourate_var.get()
     current_track = RECITATORS[selected_reciter]["tracks"][sourate]
     status_label.config(text=f"Sélectionné : {sourate}")
@@ -71,15 +87,14 @@ def on_sourate_select(event):
 # --- Navigation ---
 def open_selection():
     frame_welcome.pack_forget()
+    frame_player.pack_forget()
     frame_selection.pack(fill="both", expand=True)
 
 def open_player(reciter):
     global selected_reciter
     selected_reciter = reciter
-
     frame_selection.pack_forget()
     frame_player.pack(fill="both", expand=True)
-
     sourate_menu['values'] = list(RECITATORS[reciter]["tracks"].keys())
     sourate_var.set("")
     status_label.config(text=f"🎙 {reciter} sélectionné")
@@ -87,106 +102,142 @@ def open_player(reciter):
 # --- Interface ---
 app = tk.Tk()
 app.title("Myamo Radio Halal")
-app.geometry("800x600")
+app.geometry("900x650")
 app.resizable(False, False)
 
-# --- Fond flouté ---
+# --- Fond mosquée ---
 bg_path = os.path.join(CACHE_DIR, "mosquee.png")
-bg_img = Image.open(bg_path).resize((800, 600)).filter(ImageFilter.GaussianBlur(4))
-bg_tk = ImageTk.PhotoImage(bg_img)
-bg_label = tk.Label(app, image=bg_tk)
-bg_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-# --- Couleurs thème Myamo (chien marron/noir) ---
-BG_FRAME = "#2B1B0E"   # marron foncé
-FG_TEXT = "#F5E1C0"    # beige clair
-BTN_PLAY = "#A0522D"   # brun
-BTN_STOP = "#8B0000"   # rouge foncé
-BTN_NEXT = "#D2691E"   # orange brun
+if os.path.exists(bg_path):
+    bg_img = Image.open(bg_path).resize((900, 650))
+    bg_tk = ImageTk.PhotoImage(bg_img)
+    bg_label = tk.Label(app, image=bg_tk)
+    bg_label.place(x=0, y=0, relwidth=1, relheight=1)
 
 # --- Frame accueil ---
-frame_welcome = tk.Frame(app, bg=BG_FRAME)
+frame_welcome = tk.Frame(app, bg="#000000")  # overlay sombre
 frame_welcome.pack(fill="both", expand=True)
 
-welcome_label = tk.Label(
-    frame_welcome,
-    text="🌙 Bienvenue sur Myamo Radio 🌙",
-    font=("Arial", 24, "bold"),
-    fg=FG_TEXT,
-    bg=BG_FRAME
-)
-welcome_label.pack(expand=True)
-
-app.after(3000, open_selection)
-
-# --- Frame sélection récitateurs ---
-frame_selection = tk.Frame(app, bg=BG_FRAME)
-
-# Logo Myamo en haut
+# Logo Myamo
 myamo_path = os.path.join(CACHE_DIR, "myamo.png")
 if os.path.exists(myamo_path):
-    logo_img = Image.open(myamo_path).resize((100, 100))
+    logo_img = Image.open(myamo_path).resize((120, 120))
     logo_tk = ImageTk.PhotoImage(logo_img)
-    logo_label = tk.Label(frame_selection, image=logo_tk, bg=BG_FRAME)
+    logo_label = tk.Label(frame_welcome, image=logo_tk, bg="#000000")
     logo_label.image = logo_tk
-    logo_label.pack(pady=10)
+    logo_label.pack(pady=20)
 
-title_sel = tk.Label(
-    frame_selection,
-    text="Sélectionnez un réciteur",
-    font=("Arial", 20, "bold"),
-    fg=FG_TEXT,
-    bg=BG_FRAME
-)
-title_sel.pack(pady=10)
+welcome_label1 = tk.Label(frame_welcome, text="🌙 Bienvenue sur Myamo Radio Halal 🌙",
+                          font=("Arial", 28, "bold"), fg="white", bg="#000000")
+welcome_label1.pack(pady=10)
 
-reciters_frame = tk.Frame(frame_selection, bg=BG_FRAME)
-reciters_frame.pack(pady=15)
+welcome_label2 = tk.Label(frame_welcome, text="Salem Welcome for Myamo Radio Halal",
+                          font=("Arial", 20, "italic"), fg="white", bg="#000000")
+welcome_label2.pack(pady=10)
+
+app.after(3000, open_selection)  # animation 3 sec
+
+# --- Header permanent ---
+header = tk.Frame(app, bg="#3e2723", height=60)
+header.pack(fill="x")
+header.pack_propagate(False)
+
+if os.path.exists(myamo_path):
+    logo_img2 = Image.open(myamo_path).resize((50, 50))
+    logo_tk2 = ImageTk.PhotoImage(logo_img2)
+    logo_label2 = tk.Label(header, image=logo_tk2, bg="#3e2723")
+    logo_label2.image = logo_tk2
+    logo_label2.pack(side="left", padx=10)
+
+palestine_path = os.path.join(CACHE_DIR, "palestine.png")
+if os.path.exists(palestine_path):
+    pal_img = Image.open(palestine_path).resize((50, 30))
+    pal_tk = ImageTk.PhotoImage(pal_img)
+    pal_label = tk.Label(header, image=pal_tk, bg="#3e2723")
+    pal_label.image = pal_tk
+    pal_label.pack(side="right", padx=10)
+    text_pal = tk.Label(header, text="Free Palestine", font=("Arial", 16, "bold"), fg="white", bg="#3e2723")
+    text_pal.pack(side="right", padx=5)
+
+# --- Frame sélection récitateurs ---
+frame_selection = tk.Frame(app, bg="#5d4037")
+title_sel = tk.Label(frame_selection, text="Choisissez un réciteur", font=("Arial", 22, "bold"), fg="white", bg="#5d4037")
+title_sel.pack(pady=20)
+
+reciters_frame = tk.Frame(frame_selection, bg="#5d4037")
+reciters_frame.pack(pady=10)
 
 for i, reciter in enumerate(RECITATORS.keys()):
     img_path = os.path.join(CACHE_DIR, RECITATORS[reciter]["img"])
     if os.path.exists(img_path):
-        img = Image.open(img_path).resize((140, 140))
+        img = Image.open(img_path).resize((130, 130))
         img_tk = ImageTk.PhotoImage(img)
         btn = tk.Button(
             reciters_frame,
             image=img_tk,
             command=lambda r=reciter: open_player(r),
             bd=0, relief="flat",
-            bg=BG_FRAME,
-            activebackground=BG_FRAME
+            bg="#5d4037",
+            activebackground="#3e2723"
         )
         btn.image = img_tk
-        btn.grid(row=0, column=i, padx=20)
+        btn.grid(row=0, column=i, padx=15, pady=5)
+        # Nom du réciteur sous la photo
+        name_label = tk.Label(reciters_frame, text=reciter, fg="white", bg="#5d4037", font=("Arial", 12, "bold"))
+        name_label.grid(row=1, column=i, pady=(0, 15))
 
 # --- Frame lecteur ---
-frame_player = tk.Frame(app, bg=BG_FRAME)
+frame_player = tk.Frame(app, bg="#5d4037")
 
-status_label = tk.Label(frame_player, text="🎵 Prêt", font=("Arial", 14), fg=FG_TEXT, bg=BG_FRAME)
+btn_back = tk.Button(frame_player, text="← Retour", command=open_selection, bg="#3e2723", fg="white")
+btn_back.pack(anchor="nw", padx=10, pady=10)
+
+status_label = tk.Label(frame_player, text="🎵 Prêt", font=("Arial", 14), fg="white", bg="#5d4037")
 status_label.pack(pady=10)
 
+# --- Combobox sourates stylée ---
+style = ttk.Style()
+style.theme_use('clam')
+style.configure('TCombobox',
+                fieldbackground='#3e2723',
+                background='#3e2723',
+                foreground='white',
+                arrowcolor='white',
+                borderwidth=0)
+style.map('TCombobox',
+          fieldbackground=[('readonly', '#3e2723')],
+          background=[('readonly', '#3e2723')],
+          foreground=[('readonly', 'white')])
+
 sourate_var = tk.StringVar()
-sourate_menu = ttk.Combobox(frame_player, textvariable=sourate_var, state="readonly")
+sourate_menu = ttk.Combobox(frame_player, textvariable=sourate_var, state="readonly", width=30, style='TCombobox')
 sourate_menu.bind("<<ComboboxSelected>>", on_sourate_select)
 sourate_menu.pack(pady=10)
 
-controls = tk.Frame(frame_player, bg=BG_FRAME)
+# --- Contrôles ---
+controls = tk.Frame(frame_player, bg="#5d4037")
 controls.pack(pady=10)
 
-btn_play = tk.Button(controls, text="▶ Play", command=play, width=10, bg=BTN_PLAY, fg=FG_TEXT)
+btn_play = tk.Button(controls, text="▶ Play", command=play, width=10, bg="#4caf50", fg="white")
 btn_play.grid(row=0, column=0, padx=10)
 
-btn_stop = tk.Button(controls, text="⏹ Stop", command=stop, width=10, bg=BTN_STOP, fg=FG_TEXT)
+btn_stop = tk.Button(controls, text="⏹ Stop", command=stop, width=10, bg="#f44336", fg="white")
 btn_stop.grid(row=0, column=1, padx=10)
 
-btn_next = tk.Button(controls, text="⏭ Next", command=lambda: None, width=10, bg=BTN_NEXT, fg=FG_TEXT)
+btn_next = tk.Button(controls, text="⏭ Next", command=next_track, width=10, bg="#2196f3", fg="white")
 btn_next.grid(row=0, column=2, padx=10)
 
-volume_label = tk.Label(frame_player, text="🔊 Volume", fg=FG_TEXT, bg=BG_FRAME)
-volume_label.pack()
-volume_slider = tk.Scale(frame_player, from_=0, to=100, orient="horizontal", command=set_volume, bg=BG_FRAME, fg=FG_TEXT, troughcolor="#654321")
+# --- Slider volume modernisé ---
+volume_frame = tk.Frame(frame_player, bg="#5d4037")
+volume_frame.pack(pady=10)
+
+volume_label = tk.Label(volume_frame, text="🔊 Volume", fg="white", bg="#5d4037", font=("Arial", 12, "bold"))
+volume_label.pack(side="left", padx=5)
+
+volume_slider = tk.Scale(volume_frame, from_=0, to=100, orient="horizontal", command=set_volume,
+                         bg="#5d4037", fg="white", troughcolor="#2196f3", highlightthickness=0, bd=0,
+                         length=200)
 volume_slider.set(70)
-volume_slider.pack(pady=5)
+volume_slider.pack(side="left", padx=5)
 
 # --- Lancement ---
 app.mainloop()
