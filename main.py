@@ -130,7 +130,7 @@ welcome_label1 = tk.Label(frame_welcome, text="🌙 Bienvenue sur Myamo Radio Ha
                           font=("Arial", 28, "bold"), fg="white", bg="#000000")
 welcome_label1.pack(pady=10)
 
-welcome_label2 = tk.Label(frame_welcome, text="Salem Welcome for Myamo Radio Halal",
+welcome_label2 = tk.Label(frame_welcome, text="Welcome to Myamo Halal Radio 🤙",
                           font=("Arial", 20, "italic"), fg="white", bg="#000000")
 welcome_label2.pack(pady=10)
 
